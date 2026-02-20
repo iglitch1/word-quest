@@ -54,9 +54,9 @@ const QUESTION_WEIGHTS_BY_TIER: Record<number, { type: QuestionType; weight: num
 };
 
 export class QuestionGenerator {
-  static generateQuestionsForLevel(levelId: string, targetCount: number = 8): Question[] {
+  static async generateQuestionsForLevel(levelId: string, targetCount: number = 8): Promise<Question[]> {
     // Get level info
-    const level = queryOne<any>(
+    const level = await queryOne<any>(
       'SELECT * FROM levels WHERE id = ?',
       [levelId]
     );
@@ -66,7 +66,7 @@ export class QuestionGenerator {
     }
 
     // Get vocabulary for the world
-    const words = queryAll<Vocabulary>(
+    const words = await queryAll<Vocabulary>(
       'SELECT * FROM vocabulary WHERE world_id = ? ORDER BY difficulty_tier ASC',
       [level.world_id]
     );
@@ -84,7 +84,7 @@ export class QuestionGenerator {
     const tier = level.difficulty_tier || 1;
 
     for (const word of targetWords) {
-      const question = this.generateQuestionForWord(word, words, lastType, tier);
+      const question = await this.generateQuestionForWord(word, words, lastType, tier);
       if (question) {
         questions.push(question);
         lastType = question.questionType as QuestionType;
@@ -134,12 +134,12 @@ export class QuestionGenerator {
     return fallback ? fallback.type : 'definition';
   }
 
-  private static generateQuestionForWord(
+  private static async generateQuestionForWord(
     word: Vocabulary,
     allWords: Vocabulary[],
     lastType: QuestionType | null,
     tier: number = 3
-  ): Question | null {
+  ): Promise<Question | null> {
     const chosenType = this.pickQuestionType(lastType, tier);
 
     // Try the chosen type, then fall back through alternatives
@@ -159,7 +159,7 @@ export class QuestionGenerator {
       // Skip if it would repeat the last type (unless it's the only option left)
       if (type === lastType && type !== chosenType) continue;
 
-      const question = this.tryGenerateQuestion(type, word, allWords);
+      const question = await this.tryGenerateQuestion(type, word, allWords);
       if (question) return question;
     }
 
@@ -167,18 +167,18 @@ export class QuestionGenerator {
     return this.generateDefinitionQuestion(word, allWords);
   }
 
-  private static tryGenerateQuestion(
+  private static async tryGenerateQuestion(
     type: QuestionType,
     word: Vocabulary,
     allWords: Vocabulary[]
-  ): Question | null {
+  ): Promise<Question | null> {
     switch (type) {
       case 'definition':
         return this.generateDefinitionQuestion(word, allWords);
       case 'fill_blank':
         return this.generateFillBlankQuestion(word, allWords);
       case 'synonym':
-        return this.generateSynonymQuestion(word);
+        return await this.generateSynonymQuestion(word);
       case 'reverse_definition':
         return this.generateReverseDefinitionQuestion(word, allWords);
       case 'true_false':
@@ -186,7 +186,7 @@ export class QuestionGenerator {
       case 'example_sentence':
         return this.generateExampleSentenceQuestion(word, allWords);
       case 'antonym':
-        return this.generateAntonymQuestion(word, allWords);
+        return await this.generateAntonymQuestion(word, allWords);
       case 'spelling':
         return this.generateSpellingQuestion(word);
       default:
@@ -246,9 +246,9 @@ export class QuestionGenerator {
     };
   }
 
-  private static generateSynonymQuestion(word: Vocabulary): Question | null {
+  private static async generateSynonymQuestion(word: Vocabulary): Promise<Question | null> {
     // Look for synonyms
-    const relationships = queryAll<WordRelationship>(
+    const relationships = await queryAll<WordRelationship>(
       'SELECT * FROM word_relationships WHERE word_id = ? AND relationship_type = ?',
       [word.id, 'synonym']
     );
@@ -263,7 +263,7 @@ export class QuestionGenerator {
       return null;
     }
 
-    const relatedWords = queryAll<Vocabulary>(
+    const relatedWords = await queryAll<Vocabulary>(
       `SELECT * FROM vocabulary WHERE id IN (${relatedIds.map(() => '?').join(',')})`,
       relatedIds
     );
@@ -273,7 +273,7 @@ export class QuestionGenerator {
     }
 
     // Get some wrong options from same category
-    const wrongWords = queryAll<Vocabulary>(
+    const wrongWords = await queryAll<Vocabulary>(
       'SELECT * FROM vocabulary WHERE world_id = ? AND id NOT IN (?, ?) LIMIT 3',
       [word.world_id, word.id, ...relatedIds.slice(0, 1)]
     );
@@ -393,9 +393,9 @@ export class QuestionGenerator {
    * Antonym: Pick the word with the opposite meaning.
    * "Which word means the OPPOSITE of 'gentle'?"
    */
-  private static generateAntonymQuestion(word: Vocabulary, allWords: Vocabulary[]): Question | null {
+  private static async generateAntonymQuestion(word: Vocabulary, allWords: Vocabulary[]): Promise<Question | null> {
     // Look for antonyms
-    const relationships = queryAll<WordRelationship>(
+    const relationships = await queryAll<WordRelationship>(
       'SELECT * FROM word_relationships WHERE word_id = ? AND relationship_type = ?',
       [word.id, 'antonym']
     );
@@ -405,7 +405,7 @@ export class QuestionGenerator {
     }
 
     const relatedIds = relationships.map(r => r.related_word_id);
-    const relatedWords = queryAll<Vocabulary>(
+    const relatedWords = await queryAll<Vocabulary>(
       `SELECT * FROM vocabulary WHERE id IN (${relatedIds.map(() => '?').join(',')})`,
       relatedIds
     );

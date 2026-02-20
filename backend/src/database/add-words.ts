@@ -27,7 +27,7 @@ async function addWords() {
   await initializeDatabase();
 
   // Get existing worlds
-  const worlds = queryAll<World>('SELECT id, name, theme FROM worlds ORDER BY display_order');
+  const worlds = await queryAll<World>('SELECT id, name, theme FROM worlds ORDER BY display_order');
   if (worlds.length === 0) {
     console.error('No worlds found — run the seed first.');
     return;
@@ -40,16 +40,15 @@ async function addWords() {
   });
 
   // Check which words already exist so we don't duplicate
-  const existingWords = new Set(
-    queryAll<{ word: string }>('SELECT word FROM vocabulary').map(v => v.word.toLowerCase())
-  );
+  const existingRows = await queryAll<{ word: string }>('SELECT word FROM vocabulary');
+  const existingWords = new Set(existingRows.map(v => v.word.toLowerCase()));
   console.log(`  Existing vocabulary: ${existingWords.size} words`);
 
   let added = 0;
 
-  const insertWord = (entry: WordEntry, worldId: string) => {
+  const insertWord = async (entry: WordEntry, worldId: string) => {
     if (existingWords.has(entry.word.toLowerCase())) return;
-    execute(
+    await execute(
       `INSERT INTO vocabulary (id, word, definition, part_of_speech, difficulty_tier, example_sentence, category, world_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [uuid(), entry.word, entry.definition, entry.pos, entry.tier, entry.example, entry.category, worldId]
@@ -80,7 +79,9 @@ async function addWords() {
       { word: 'flicker', definition: 'to shine with an unsteady light', pos: 'verb', tier: 2, example: 'The candle flickered in the breeze', category: 'sun_light' },
       { word: 'ignite', definition: 'to catch fire or set alight', pos: 'verb', tier: 3, example: 'A spark ignited the dry leaves', category: 'sun_light' },
     ];
-    sunWords.forEach(w => insertWord(w, sunId));
+    for (const w of sunWords) {
+      await insertWord(w, sunId);
+    }
   }
 
   // ============================================================
@@ -108,7 +109,9 @@ async function addWords() {
       { word: 'crisp', definition: 'cool and fresh', pos: 'adjective', tier: 1, example: 'The crisp autumn air felt refreshing', category: 'wind' },
       { word: 'blustery', definition: 'blowing in strong gusts', pos: 'adjective', tier: 3, example: 'A blustery day sent leaves swirling', category: 'wind' },
     ];
-    weatherWords.forEach(w => insertWord(w, weatherId));
+    for (const w of weatherWords) {
+      await insertWord(w, weatherId);
+    }
   }
 
   // ============================================================
@@ -133,7 +136,9 @@ async function addWords() {
       { word: 'glide', definition: 'to move smoothly and quietly', pos: 'verb', tier: 2, example: 'Dolphins glide through the waves', category: 'beach_sea' },
       { word: 'swell', definition: 'to rise in size or amount', pos: 'verb', tier: 2, example: 'The ocean began to swell before the storm', category: 'beach_sea' },
     ];
-    seaWords.forEach(w => insertWord(w, seaId));
+    for (const w of seaWords) {
+      await insertWord(w, seaId);
+    }
   }
 
   // ============================================================
@@ -161,7 +166,9 @@ async function addWords() {
       { word: 'decay', definition: 'to rot or break down naturally', pos: 'verb', tier: 3, example: 'Fallen leaves decay on the forest floor', category: 'forest' },
       { word: 'thrive', definition: 'to grow and develop well', pos: 'verb', tier: 3, example: 'Wildflowers thrive in the meadow', category: 'forest' },
     ];
-    forestWords.forEach(w => insertWord(w, forestId));
+    for (const w of forestWords) {
+      await insertWord(w, forestId);
+    }
   }
 
   // ============================================================
@@ -192,7 +199,9 @@ async function addWords() {
       { word: 'stubborn', definition: 'refusing to change one\'s mind', pos: 'adjective', tier: 2, example: 'The stubborn donkey would not move', category: 'hair' },
       { word: 'timid', definition: 'easily frightened; shy', pos: 'adjective', tier: 2, example: 'The timid rabbit froze at the noise', category: 'eyes' },
     ];
-    appearanceWords.forEach(w => insertWord(w, appearanceId));
+    for (const w of appearanceWords) {
+      await insertWord(w, appearanceId);
+    }
   }
 
   // ============================================================
@@ -222,14 +231,16 @@ async function addWords() {
       { word: 'cheerfully', definition: 'in a happy and positive way', pos: 'adverb', tier: 1, example: 'He cheerfully greeted everyone', category: 'adverbs' },
       { word: 'nervously', definition: 'in an anxious or worried way', pos: 'adverb', tier: 1, example: 'She nervously waited for her turn', category: 'adverbs' },
     ];
-    movementWords.forEach(w => insertWord(w, movementId));
+    for (const w of movementWords) {
+      await insertWord(w, movementId);
+    }
   }
 
   // ============================================================
   // Add more synonym/antonym relationships for new words
   // ============================================================
   console.log('Adding word relationships...');
-  const allVocab = queryAll<{ id: string; word: string }>('SELECT id, word FROM vocabulary');
+  const allVocab = await queryAll<{ id: string; word: string }>('SELECT id, word FROM vocabulary');
   const wordMap = new Map<string, string>();
   allVocab.forEach(v => wordMap.set(v.word.toLowerCase(), v.id));
 
@@ -275,45 +286,45 @@ async function addWords() {
 
   let relsAdded = 0;
 
-  newSynonyms.forEach(([w1, w2]) => {
+  for (const [w1, w2] of newSynonyms) {
     const id1 = wordMap.get(w1.toLowerCase());
     const id2 = wordMap.get(w2.toLowerCase());
     if (id1 && id2) {
       // Check if relationship already exists
-      const exists = queryOne<any>(
+      const exists = await queryOne<any>(
         'SELECT id FROM word_relationships WHERE word_id = ? AND related_word_id = ?',
         [id1, id2]
       );
       if (!exists) {
-        execute(
+        await execute(
           'INSERT INTO word_relationships (id, word_id, related_word_id, relationship_type) VALUES (?, ?, ?, ?)',
           [uuid(), id1, id2, 'synonym']
         );
         relsAdded++;
       }
     }
-  });
+  }
 
-  newAntonyms.forEach(([w1, w2]) => {
+  for (const [w1, w2] of newAntonyms) {
     const id1 = wordMap.get(w1.toLowerCase());
     const id2 = wordMap.get(w2.toLowerCase());
     if (id1 && id2) {
-      const exists = queryOne<any>(
+      const exists = await queryOne<any>(
         'SELECT id FROM word_relationships WHERE word_id = ? AND related_word_id = ?',
         [id1, id2]
       );
       if (!exists) {
-        execute(
+        await execute(
           'INSERT INTO word_relationships (id, word_id, related_word_id, relationship_type) VALUES (?, ?, ?, ?)',
           [uuid(), id1, id2, 'antonym']
         );
         relsAdded++;
       }
     }
-  });
+  }
 
   console.log(`\nDone! Added ${added} new words and ${relsAdded} new relationships.`);
-  const finalCount = queryOne<{ count: number }>('SELECT COUNT(*) as count FROM vocabulary');
+  const finalCount = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM vocabulary');
   console.log(`Total vocabulary: ${finalCount?.count} words`);
 }
 

@@ -7,14 +7,14 @@ import { CharacterItem, PlayerInventory, PlayerProgress, ShopItemResponse } from
 const router = Router();
 
 // GET /api/shop/items
-router.get('/items', authMiddleware, (req: AuthRequest, res: Response) => {
+router.get('/items', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const items = queryAll<CharacterItem>(
+    const items = await queryAll<CharacterItem>(
       'SELECT * FROM character_items ORDER BY type ASC, cost_coins ASC'
     );
 
     // Get user inventory
-    const inventory = queryAll<any>(
+    const inventory = await queryAll<any>(
       'SELECT item_id, equipped FROM player_inventory WHERE user_id = ?',
       [req.userId]
     );
@@ -54,7 +54,7 @@ router.get('/items', authMiddleware, (req: AuthRequest, res: Response) => {
     });
 
     // Get player coins
-    const progress = queryOne<PlayerProgress>(
+    const progress = await queryOne<PlayerProgress>(
       'SELECT total_coins FROM player_progress WHERE user_id = ?',
       [req.userId]
     );
@@ -70,7 +70,7 @@ router.get('/items', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/shop/purchase
-router.post('/purchase', authMiddleware, (req: AuthRequest, res: Response) => {
+router.post('/purchase', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { itemId } = req.body;
 
@@ -83,7 +83,7 @@ router.post('/purchase', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Get item
-    const item = queryOne<CharacterItem>(
+    const item = await queryOne<CharacterItem>(
       'SELECT * FROM character_items WHERE id = ?',
       [itemId]
     );
@@ -97,7 +97,7 @@ router.post('/purchase', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Check if already owned
-    const existing = queryOne<PlayerInventory>(
+    const existing = await queryOne<PlayerInventory>(
       'SELECT * FROM player_inventory WHERE user_id = ? AND item_id = ?',
       [req.userId, itemId]
     );
@@ -111,7 +111,7 @@ router.post('/purchase', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Get user progress
-    const progress = queryOne<PlayerProgress>(
+    const progress = await queryOne<PlayerProgress>(
       'SELECT * FROM player_progress WHERE user_id = ?',
       [req.userId]
     );
@@ -125,19 +125,19 @@ router.post('/purchase', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Deduct coins
-    execute(
+    await execute(
       'UPDATE player_progress SET total_coins = total_coins - ? WHERE user_id = ?',
       [item.cost_coins, req.userId]
     );
 
     // Add to inventory
-    execute(
+    await execute(
       'INSERT INTO player_inventory (id, user_id, item_id, equipped) VALUES (?, ?, ?, ?)',
-      [uuid(), req.userId, itemId, 0]
+      [uuid(), req.userId, itemId, false]
     );
 
     // Get updated progress
-    const updatedProgress = queryOne<PlayerProgress>(
+    const updatedProgress = await queryOne<PlayerProgress>(
       'SELECT * FROM player_progress WHERE user_id = ?',
       [req.userId]
     );
@@ -162,7 +162,7 @@ router.post('/purchase', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/shop/equip
-router.post('/equip', authMiddleware, (req: AuthRequest, res: Response) => {
+router.post('/equip', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { itemId } = req.body;
 
@@ -175,7 +175,7 @@ router.post('/equip', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Verify item is owned
-    const inventory = queryOne<PlayerInventory>(
+    const inventory = await queryOne<PlayerInventory>(
       'SELECT * FROM player_inventory WHERE user_id = ? AND item_id = ?',
       [req.userId, itemId]
     );
@@ -189,7 +189,7 @@ router.post('/equip', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Get item type
-    const item = queryOne<CharacterItem>(
+    const item = await queryOne<CharacterItem>(
       'SELECT * FROM character_items WHERE id = ?',
       [itemId]
     );
@@ -203,14 +203,14 @@ router.post('/equip', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Unequip other items of same type
-    execute(
-      'UPDATE player_inventory SET equipped = 0 WHERE user_id = ? AND item_id IN (SELECT id FROM character_items WHERE type = ?)',
+    await execute(
+      'UPDATE player_inventory SET equipped = FALSE WHERE user_id = ? AND item_id IN (SELECT id FROM character_items WHERE type = ?)',
       [req.userId, item.type]
     );
 
     // Equip this item
-    execute(
-      'UPDATE player_inventory SET equipped = 1 WHERE user_id = ? AND item_id = ?',
+    await execute(
+      'UPDATE player_inventory SET equipped = TRUE WHERE user_id = ? AND item_id = ?',
       [req.userId, itemId]
     );
 
@@ -229,13 +229,13 @@ router.post('/equip', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/shop/character
-router.get('/character', authMiddleware, (req: AuthRequest, res: Response) => {
+router.get('/character', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     // Get equipped items
-    const equippedItems = queryAll<any>(
+    const equippedItems = await queryAll<any>(
       `SELECT ci.id, ci.name, ci.type, ci.asset_key FROM character_items ci
        JOIN player_inventory pi ON ci.id = pi.item_id
-       WHERE pi.user_id = ? AND pi.equipped = 1`,
+       WHERE pi.user_id = ? AND pi.equipped = TRUE`,
       [req.userId]
     );
 

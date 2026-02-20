@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   display_name TEXT NOT NULL,
   password_hash TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'player',
-  created_at INTEGER NOT NULL
+  created_at BIGINT NOT NULL
 );
 
 -- Worlds table
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS character_items (
   type TEXT NOT NULL,
   asset_key TEXT NOT NULL,
   cost_coins INTEGER DEFAULT 0,
-  is_default BOOLEAN DEFAULT 0,
+  is_default BOOLEAN DEFAULT FALSE,
   CHECK (type IN ('base', 'hat', 'outfit', 'pet', 'effect'))
 );
 
@@ -142,7 +142,7 @@ CREATE TABLE IF NOT EXISTS player_inventory (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
   item_id TEXT NOT NULL,
-  equipped BOOLEAN DEFAULT 0,
+  equipped BOOLEAN DEFAULT FALSE,
   UNIQUE (user_id, item_id),
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (item_id) REFERENCES character_items(id)

@@ -1,123 +1,77 @@
-import initSqlJs, { Database } from 'sql.js';
-import * as fs from 'fs';
-import * as path from 'path';
+import { Pool, types } from 'pg';
 import { SCHEMA } from './schema';
 
-let db: Database | null = null;
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../data/wordquest.db');
-const DATA_DIR = path.dirname(DB_PATH);
+// Parse INT8 (BIGINT) as JavaScript number instead of string.
+// This ensures COUNT(*) returns a number, not a string.
+types.setTypeParser(20, (val: string) => parseInt(val, 10));
 
-export async function initializeDatabase(): Promise<Database> {
-  if (db) {
-    return db;
-  }
+let pool: Pool | null = null;
 
-  // Ensure data directory exists
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
+// Auto-convert SQLite ? placeholders to PostgreSQL $1, $2, $3...
+function convertPlaceholders(sql: string): string {
+  let idx = 0;
+  return sql.replace(/\?/g, () => `$${++idx}`);
+}
 
-  const SQL = await initSqlJs();
+export async function initializeDatabase(): Promise<void> {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('localhost') ? undefined : { rejectUnauthorized: false },
+  });
 
-  // Load existing database or create new one
-  if (fs.existsSync(DB_PATH)) {
-    const buffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(buffer);
-  } else {
-    db = new SQL.Database();
-  }
-
-  // Initialize schema
+  // Run schema statements
   const statements = SCHEMA.split(';').filter(stmt => stmt.trim());
   for (const statement of statements) {
     if (statement.trim()) {
-      db.run(statement);
+      await pool.query(statement);
     }
   }
-
-  // Save database
-  saveDatabase();
-
-  return db;
 }
 
-export function getDatabase(): Database {
-  if (!db) {
+function getPool(): Pool {
+  if (!pool) {
     throw new Error('Database not initialized. Call initializeDatabase() first.');
   }
-  return db;
+  return pool;
 }
 
-export function saveDatabase(): void {
-  if (!db) return;
-
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(DB_PATH, buffer);
+export async function queryOne<T>(sql: string, params: any[] = []): Promise<T | null> {
+  const p = getPool();
+  const result = await p.query(convertPlaceholders(sql), params);
+  return result.rows.length > 0 ? (result.rows[0] as T) : null;
 }
 
-export function closeDatabase(): void {
-  if (db) {
-    saveDatabase();
-    db.close();
-    db = null;
-  }
+export async function queryAll<T>(sql: string, params: any[] = []): Promise<T[]> {
+  const p = getPool();
+  const result = await p.query(convertPlaceholders(sql), params);
+  return result.rows as T[];
 }
 
-export function queryOne<T>(sql: string, params: any[] = []): T | null {
-  const db = getDatabase();
-  const results = query<T>(sql, params);
-  return results.length > 0 ? results[0] : null;
+export async function execute(sql: string, params: any[] = []): Promise<void> {
+  const p = getPool();
+  await p.query(convertPlaceholders(sql), params);
 }
 
-export function queryAll<T>(sql: string, params: any[] = []): T[] {
-  return query<T>(sql, params);
-}
-
-export function query<T>(sql: string, params: any[] = []): T[] {
-  const db = getDatabase();
+export async function executeBatch(statements: Array<{ sql: string; params: any[] }>): Promise<void> {
+  const p = getPool();
+  const client = await p.connect();
   try {
-    const stmt = db.prepare(sql);
-    stmt.bind(params);
-
-    const results: T[] = [];
-    while (stmt.step()) {
-      results.push(stmt.getAsObject() as T);
-    }
-    stmt.free();
-    return results;
-  } catch (error) {
-    console.error('Query error:', sql, params, error);
-    throw error;
-  }
-}
-
-export function execute(sql: string, params: any[] = []): void {
-  const db = getDatabase();
-  try {
-    const stmt = db.prepare(sql);
-    stmt.bind(params);
-    stmt.step();
-    stmt.free();
-    saveDatabase();
-  } catch (error) {
-    console.error('Execute error:', sql, params, error);
-    throw error;
-  }
-}
-
-export function executeBatch(statements: Array<{ sql: string; params: any[] }>): void {
-  const db = getDatabase();
-  try {
+    await client.query('BEGIN');
     for (const { sql, params } of statements) {
-      const stmt = db.prepare(sql);
-      stmt.bind(params);
-      stmt.step();
-      stmt.free();
+      await client.query(convertPlaceholders(sql), params);
     }
-    saveDatabase();
+    await client.query('COMMIT');
   } catch (error) {
-    console.error('Batch execute error:', error);
+    await client.query('ROLLBACK');
     throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function closeDatabase(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
   }
 }

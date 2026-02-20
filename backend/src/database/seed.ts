@@ -1,4 +1,4 @@
-import { initializeDatabase, execute, executeBatch, queryOne, getDatabase } from './db';
+import { initializeDatabase, execute, queryOne } from './db';
 import { v4 as uuid } from 'uuid';
 
 interface World {
@@ -44,12 +44,9 @@ interface CharacterItem {
   is_default: boolean;
 }
 
-async function seedDatabase() {
-  console.log('Initializing database...');
-  await initializeDatabase();
-
+export async function runSeed() {
   // Check if already seeded
-  const worldCount = queryOne<{ count: number }>('SELECT COUNT(*) as count FROM worlds');
+  const worldCount = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM worlds');
   if (worldCount && worldCount.count > 0) {
     console.log('Database already seeded!');
     return;
@@ -58,7 +55,7 @@ async function seedDatabase() {
   console.log('Seeding worlds...');
   const worlds = createWorlds();
   for (const world of worlds) {
-    execute(
+    await execute(
       `INSERT INTO worlds (id, name, description, theme, display_order, icon_emoji, color_primary, color_secondary, unlock_stars_required)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [world.id, world.name, world.description, world.theme, world.display_order, world.icon_emoji, world.color_primary, world.color_secondary, world.unlock_stars_required]
@@ -68,7 +65,7 @@ async function seedDatabase() {
   console.log('Seeding levels...');
   const levels = createLevels(worlds);
   for (const level of levels) {
-    execute(
+    await execute(
       `INSERT INTO levels (id, world_id, level_number, name, difficulty_tier, target_word_count, time_limit_seconds, base_coins)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [level.id, level.world_id, level.level_number, level.name, level.difficulty_tier, level.target_word_count, level.time_limit_seconds, level.base_coins]
@@ -78,7 +75,7 @@ async function seedDatabase() {
   console.log('Seeding vocabulary...');
   const vocabulary = createVocabulary(worlds);
   for (const word of vocabulary) {
-    execute(
+    await execute(
       `INSERT INTO vocabulary (id, word, definition, part_of_speech, difficulty_tier, example_sentence, category, world_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [word.id, word.word, word.definition, word.part_of_speech, word.difficulty_tier, word.example_sentence, word.category, word.world_id]
@@ -88,7 +85,7 @@ async function seedDatabase() {
   console.log('Seeding word relationships...');
   const relationships = createWordRelationships(vocabulary);
   for (const rel of relationships) {
-    execute(
+    await execute(
       `INSERT INTO word_relationships (id, word_id, related_word_id, relationship_type)
        VALUES (?, ?, ?, ?)`,
       [uuid(), rel.word_id, rel.related_word_id, rel.relationship_type]
@@ -98,10 +95,10 @@ async function seedDatabase() {
   console.log('Seeding character items...');
   const items = createCharacterItems();
   for (const item of items) {
-    execute(
+    await execute(
       `INSERT INTO character_items (id, name, type, asset_key, cost_coins, is_default)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [item.id, item.name, item.type, item.asset_key, item.cost_coins, item.is_default ? 1 : 0]
+      [item.id, item.name, item.type, item.asset_key, item.cost_coins, item.is_default]
     );
   }
 
@@ -654,7 +651,16 @@ function createCharacterItems(): CharacterItem[] {
   return items;
 }
 
-seedDatabase().catch(error => {
-  console.error('Seeding failed:', error);
-  process.exit(1);
-});
+async function seedDatabase() {
+  console.log('Initializing database...');
+  await initializeDatabase();
+  await runSeed();
+}
+
+// Only run when executed as a script directly
+if (require.main === module) {
+  seedDatabase().catch(error => {
+    console.error('Seeding failed:', error);
+    process.exit(1);
+  });
+}

@@ -30,7 +30,7 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     }
 
     // Check if username exists
-    const existing = queryOne<User>(
+    const existing = await queryOne<User>(
       'SELECT id FROM users WHERE username = ?',
       [username]
     );
@@ -50,30 +50,30 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     const userId = uuid();
     const now = Date.now();
 
-    execute(
+    await execute(
       `INSERT INTO users (id, username, display_name, password_hash, role, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [userId, username, displayName, passwordHash, role, now]
     );
 
     // Create player progress
-    execute(
+    await execute(
       `INSERT INTO player_progress (user_id, total_coins, total_stars, current_title, words_mastered)
        VALUES (?, ?, ?, ?, ?)`,
       [userId, 0, 0, 'Word Apprentice', 0]
     );
 
     // Get default base item
-    const defaultBase = queryOne<any>(
-      'SELECT id FROM character_items WHERE type = ? AND is_default = 1',
+    const defaultBase = await queryOne<any>(
+      'SELECT id FROM character_items WHERE type = ? AND is_default = TRUE',
       ['base']
     );
 
     if (defaultBase) {
-      execute(
+      await execute(
         `INSERT INTO player_inventory (id, user_id, item_id, equipped)
          VALUES (?, ?, ?, ?)`,
-        [uuid(), userId, defaultBase.id, 1]
+        [uuid(), userId, defaultBase.id, true]
       );
     }
 
@@ -81,12 +81,12 @@ router.post('/register', async (req: AuthRequest, res: Response) => {
     const token = generateToken(userId, role);
 
     // Get user info
-    const user = queryOne<User>(
+    const user = await queryOne<User>(
       'SELECT id, username, display_name, role FROM users WHERE id = ?',
       [userId]
     );
 
-    const progress = queryOne<PlayerProgress>(
+    const progress = await queryOne<PlayerProgress>(
       'SELECT * FROM player_progress WHERE user_id = ?',
       [userId]
     );
@@ -125,7 +125,7 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     }
 
     // Get user
-    const user = queryOne<User>(
+    const user = await queryOne<User>(
       'SELECT * FROM users WHERE username = ?',
       [username]
     );
@@ -152,7 +152,7 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     const token = generateToken(user.id, user.role);
 
     // Get progress
-    const progress = queryOne<PlayerProgress>(
+    const progress = await queryOne<PlayerProgress>(
       'SELECT * FROM player_progress WHERE user_id = ?',
       [user.id]
     );
@@ -177,9 +177,9 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/auth/me
-router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
+router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const user = queryOne<any>(
+    const user = await queryOne<any>(
       'SELECT id, username, display_name, role, created_at FROM users WHERE id = ?',
       [req.userId]
     );
@@ -192,7 +192,7 @@ router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
       return;
     }
 
-    const progress = queryOne<PlayerProgress>(
+    const progress = await queryOne<PlayerProgress>(
       'SELECT * FROM player_progress WHERE user_id = ?',
       [req.userId]
     );

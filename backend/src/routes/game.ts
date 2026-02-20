@@ -22,7 +22,7 @@ function cleanupSession(sessionId: string) {
 }
 
 // POST /api/game/start
-router.post('/start', authMiddleware, (req: AuthRequest, res: Response) => {
+router.post('/start', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { levelId } = req.body;
 
@@ -35,7 +35,7 @@ router.post('/start', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Get level
-    const level = queryOne<Level>(
+    const level = await queryOne<Level>(
       'SELECT * FROM levels WHERE id = ?',
       [levelId]
     );
@@ -52,14 +52,14 @@ router.post('/start', authMiddleware, (req: AuthRequest, res: Response) => {
     const sessionId = uuid();
     const now = Date.now();
 
-    execute(
+    await execute(
       `INSERT INTO game_sessions (id, user_id, level_id, started_at, status)
        VALUES (?, ?, ?, ?, ?)`,
       [sessionId, req.userId, levelId, now, 'active']
     );
 
     // Generate questions
-    const questions = QuestionGenerator.generateQuestionsForLevel(levelId, level.target_word_count);
+    const questions = await QuestionGenerator.generateQuestionsForLevel(levelId, level.target_word_count);
 
     if (questions.length === 0) {
       res.status(500).json({
@@ -101,7 +101,7 @@ router.post('/start', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/game/answer
-router.post('/answer', authMiddleware, (req: AuthRequest, res: Response) => {
+router.post('/answer', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { sessionId, wordId, questionType, answer } = req.body;
 
@@ -114,7 +114,7 @@ router.post('/answer', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Verify session exists and belongs to user
-    const session = queryOne<GameSession>(
+    const session = await queryOne<GameSession>(
       'SELECT * FROM game_sessions WHERE id = ? AND user_id = ?',
       [sessionId, req.userId]
     );
@@ -136,7 +136,7 @@ router.post('/answer', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Get word
-    const word = queryOne<Vocabulary>(
+    const word = await queryOne<Vocabulary>(
       'SELECT * FROM vocabulary WHERE id = ?',
       [wordId]
     );
@@ -150,7 +150,7 @@ router.post('/answer', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Get level for points calculation
-    const level = queryOne<Level>(
+    const level = await queryOne<Level>(
       'SELECT * FROM levels WHERE id = ?',
       [session.level_id]
     );
@@ -172,12 +172,12 @@ router.post('/answer', authMiddleware, (req: AuthRequest, res: Response) => {
         isCorrect = answer.toLowerCase() === word.word.toLowerCase();
         break;
       case 'synonym': {
-        const synRelation = queryOne<any>(
+        const synRelation = await queryOne<any>(
           'SELECT wr.related_word_id FROM word_relationships wr WHERE wr.word_id = ? AND wr.relationship_type = ?',
           [wordId, 'synonym']
         );
         if (synRelation) {
-          const synonym = queryOne<Vocabulary>(
+          const synonym = await queryOne<Vocabulary>(
             'SELECT * FROM vocabulary WHERE id = ?',
             [synRelation.related_word_id]
           );
@@ -206,12 +206,12 @@ router.post('/answer', authMiddleware, (req: AuthRequest, res: Response) => {
         isCorrect = answer === word.example_sentence;
         break;
       case 'antonym': {
-        const antRelation = queryOne<any>(
+        const antRelation = await queryOne<any>(
           'SELECT wr.related_word_id FROM word_relationships wr WHERE wr.word_id = ? AND wr.relationship_type = ?',
           [wordId, 'antonym']
         );
         if (antRelation) {
-          const antonym = queryOne<Vocabulary>(
+          const antonym = await queryOne<Vocabulary>(
             'SELECT * FROM vocabulary WHERE id = ?',
             [antRelation.related_word_id]
           );
@@ -231,7 +231,7 @@ router.post('/answer', authMiddleware, (req: AuthRequest, res: Response) => {
 
     // Calculate points
     const responseTimeMs = Date.now() - session.started_at;
-    const previousAnswers = queryAll<SessionAnswer>(
+    const previousAnswers = await queryAll<SessionAnswer>(
       'SELECT is_correct FROM session_answers WHERE session_id = ?',
       [sessionId]
     );
@@ -252,10 +252,10 @@ router.post('/answer', authMiddleware, (req: AuthRequest, res: Response) => {
 
     // Save answer
     const answerId = uuid();
-    execute(
+    await execute(
       `INSERT INTO session_answers (id, session_id, word_id, question_type, correct_answer, user_answer, is_correct, response_time_ms, points_earned)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [answerId, sessionId, wordId, questionType, correctAnswer, answer, isCorrect ? 1 : 0, responseTimeMs, pointsEarned]
+      [answerId, sessionId, wordId, questionType, correctAnswer, answer, isCorrect, responseTimeMs, pointsEarned]
     );
 
     res.json({
@@ -275,7 +275,7 @@ router.post('/answer', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // POST /api/game/complete
-router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
+router.post('/complete', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { sessionId } = req.body;
 
@@ -288,7 +288,7 @@ router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Get session
-    const session = queryOne<GameSession>(
+    const session = await queryOne<GameSession>(
       'SELECT * FROM game_sessions WHERE id = ? AND user_id = ?',
       [sessionId, req.userId]
     );
@@ -302,7 +302,7 @@ router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Get all answers
-    const answers = queryAll<SessionAnswer>(
+    const answers = await queryAll<SessionAnswer>(
       'SELECT * FROM session_answers WHERE session_id = ?',
       [sessionId]
     );
@@ -313,16 +313,17 @@ router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
     const accuracy = totalCount > 0 ? correctCount / totalCount : 0;
     const score = answers.reduce((sum, a) => sum + a.points_earned, 0);
     const starsEarned = calculateStars(accuracy);
-    const baseCoins = queryOne<Level>(
+    const levelData = await queryOne<Level>(
       'SELECT base_coins FROM levels WHERE id = ?',
       [session.level_id]
-    )?.base_coins || 100;
+    );
+    const baseCoins = levelData?.base_coins || 100;
     const coinsEarned = Math.floor(baseCoins * (0.5 + accuracy * 0.5));
 
     const now = Date.now();
 
     // Get or create level completion
-    const existingCompletion = queryOne<LevelCompletion>(
+    const existingCompletion = await queryOne<LevelCompletion>(
       'SELECT * FROM level_completion WHERE user_id = ? AND level_id = ?',
       [req.userId, session.level_id]
     );
@@ -339,7 +340,7 @@ router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
     // Update or create level completion
     if (existingCompletion) {
       statements.push({
-        sql: `UPDATE level_completion SET best_stars = MAX(?, best_stars), best_score = MAX(?, best_score), times_played = times_played + 1
+        sql: `UPDATE level_completion SET best_stars = GREATEST(?, best_stars), best_score = GREATEST(?, best_score), times_played = times_played + 1
               WHERE id = ?`,
         params: [starsEarned, score, existingCompletion.id],
       });
@@ -353,7 +354,7 @@ router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
 
     // Update word mastery for each answer
     for (const answer of answers) {
-      const existingMastery = queryOne<any>(
+      const existingMastery = await queryOne<any>(
         'SELECT * FROM word_mastery WHERE user_id = ? AND word_id = ?',
         [req.userId, answer.word_id]
       );
@@ -387,17 +388,18 @@ router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
     }
 
     // Get current progress
-    const currentProgress = queryOne<PlayerProgress>(
+    const currentProgress = await queryOne<PlayerProgress>(
       'SELECT * FROM player_progress WHERE user_id = ?',
       [req.userId]
     );
 
     const newTotalCoins = (currentProgress?.total_coins || 0) + coinsEarned;
     const newTotalStars = (currentProgress?.total_stars || 0) + starsEarned;
-    const wordsMastered = queryAll<any>(
+    const wordsMasteredResult = await queryAll<any>(
       'SELECT COUNT(*) as count FROM word_mastery WHERE user_id = ? AND mastery_level = ?',
       [req.userId, 'mastered']
-    )[0]?.count || 0;
+    );
+    const wordsMastered = wordsMasteredResult[0]?.count || 0;
 
     // Update player progress
     statements.push({
@@ -406,13 +408,13 @@ router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
       params: [newTotalCoins, newTotalStars, wordsMastered, req.userId],
     });
 
-    executeBatch(statements);
+    await executeBatch(statements);
 
     // Clean up in-memory question store for this session
     cleanupSession(sessionId);
 
     // Get updated progress
-    const updatedProgress = queryOne<PlayerProgress>(
+    const updatedProgress = await queryOne<PlayerProgress>(
       'SELECT * FROM player_progress WHERE user_id = ?',
       [req.userId]
     );
@@ -431,7 +433,7 @@ router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
     const titleChanged = newTitle !== oldTitle;
 
     if (titleChanged) {
-      execute('UPDATE player_progress SET current_title = ? WHERE user_id = ?', [newTitle, req.userId]);
+      await execute('UPDATE player_progress SET current_title = ? WHERE user_id = ?', [newTitle, req.userId]);
     }
 
     res.json({
@@ -461,11 +463,11 @@ router.post('/complete', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/game/session/:sessionId
-router.get('/session/:sessionId', authMiddleware, (req: AuthRequest, res: Response) => {
+router.get('/session/:sessionId', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
 
-    const session = queryOne<GameSession>(
+    const session = await queryOne<GameSession>(
       'SELECT * FROM game_sessions WHERE id = ? AND user_id = ?',
       [sessionId, req.userId]
     );
@@ -478,12 +480,12 @@ router.get('/session/:sessionId', authMiddleware, (req: AuthRequest, res: Respon
       return;
     }
 
-    const level = queryOne<Level>(
+    const level = await queryOne<Level>(
       'SELECT * FROM levels WHERE id = ?',
       [session.level_id]
     );
 
-    const answers = queryAll<SessionAnswer>(
+    const answers = await queryAll<SessionAnswer>(
       'SELECT * FROM session_answers WHERE session_id = ?',
       [sessionId]
     );

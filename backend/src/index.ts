@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import * as path from 'path';
 import * as fs from 'fs';
 import { initializeDatabase, closeDatabase } from './database/db';
+import { runSeed } from './database/seed';
 import authRoutes from './routes/auth';
 import worldsRoutes from './routes/worlds';
 import gameRoutes from './routes/game';
@@ -57,6 +59,9 @@ async function start() {
     await initializeDatabase();
     console.log('Database initialized');
 
+    // Auto-seed if database is empty (first deploy)
+    await runSeed();
+
     app.listen(PORT, () => {
       console.log(`Word Quest backend running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -70,14 +75,12 @@ async function start() {
 // Handle graceful shutdown
 process.on('SIGINT', () => {
   console.log('Shutting down gracefully...');
-  closeDatabase();
-  process.exit(0);
+  closeDatabase().then(() => process.exit(0));
 });
 
 process.on('SIGTERM', () => {
   console.log('Shutting down gracefully...');
-  closeDatabase();
-  process.exit(0);
+  closeDatabase().then(() => process.exit(0));
 });
 
 start();

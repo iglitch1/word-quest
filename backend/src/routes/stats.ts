@@ -6,27 +6,27 @@ import { PlayerProgress, WordMastery } from '../types';
 const router = Router();
 
 // GET /api/stats/overview
-router.get('/overview', authMiddleware, (req: AuthRequest, res: Response) => {
+router.get('/overview', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     // Get player progress
-    const progress = queryOne<PlayerProgress>(
+    const progress = await queryOne<PlayerProgress>(
       'SELECT * FROM player_progress WHERE user_id = ?',
       [req.userId]
     );
 
     // Count levels completed
-    const levelsData = queryOne<any>(
+    const levelsData = await queryOne<any>(
       'SELECT COUNT(*) as completed, (SELECT COUNT(*) FROM levels) as total FROM level_completion WHERE user_id = ?',
       [req.userId]
     );
 
     // Get word mastery
-    const wordsMastered = queryAll<WordMastery>(
+    const wordsMastered = await queryAll<WordMastery>(
       'SELECT * FROM word_mastery WHERE user_id = ? AND mastery_level = ?',
       [req.userId, 'mastered']
     );
 
-    const wordsLearning = queryAll<WordMastery>(
+    const wordsLearning = await queryAll<WordMastery>(
       'SELECT DISTINCT word_id FROM word_mastery WHERE user_id = ? AND mastery_level IN (?, ?)',
       [req.userId, 'learning', 'proficient']
     );
@@ -52,10 +52,10 @@ router.get('/overview', authMiddleware, (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/stats/mastery
-router.get('/mastery', authMiddleware, (req: AuthRequest, res: Response) => {
+router.get('/mastery', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     // Get all mastery data grouped by category
-    const masteryData = queryAll<any>(
+    const masteryData = await queryAll<any>(
       `SELECT v.id, v.word, v.category, v.definition, wm.times_correct, wm.times_attempted, wm.mastery_level
        FROM word_mastery wm
        JOIN vocabulary v ON wm.word_id = v.id

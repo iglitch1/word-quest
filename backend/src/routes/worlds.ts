@@ -6,9 +6,9 @@ import { World, Level, WorldStats } from '../types';
 const router = Router();
 
 // GET /api/worlds
-router.get('/', optionalAuth, (req: AuthRequest, res: Response) => {
+router.get('/', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const worlds = queryAll<World>(
+    const worlds = await queryAll<World>(
       'SELECT * FROM worlds ORDER BY display_order ASC'
     );
 
@@ -35,15 +35,16 @@ router.get('/', optionalAuth, (req: AuthRequest, res: Response) => {
     }
 
     // Get user's progress
-    const worldStats: WorldStats[] = worlds.map(world => {
+    const worldStats: WorldStats[] = [];
+    for (const world of worlds) {
       // Get levels in world
-      const levels = queryAll<Level>(
+      const levels = await queryAll<Level>(
         'SELECT id FROM levels WHERE world_id = ?',
         [world.id]
       );
 
       // Get completed levels
-      const completedLevels = queryAll<any>(
+      const completedLevels = await queryAll<any>(
         'SELECT COALESCE(SUM(best_stars), 0) as total_stars, COUNT(*) as count FROM level_completion WHERE user_id = ? AND level_id IN (SELECT id FROM levels WHERE world_id = ?)',
         [req.userId, world.id]
       );
@@ -51,7 +52,7 @@ router.get('/', optionalAuth, (req: AuthRequest, res: Response) => {
       const totalStars = completedLevels[0]?.total_stars || 0;
       const completed = completedLevels[0]?.count || 0;
 
-      return {
+      worldStats.push({
         worldId: world.id,
         name: world.name,
         iconEmoji: world.icon_emoji,
@@ -59,11 +60,11 @@ router.get('/', optionalAuth, (req: AuthRequest, res: Response) => {
         levelsCompleted: completed,
         totalLevels: levels.length,
         unlockedAt: world.unlock_stars_required === 0 ? Date.now() : undefined,
-      };
-    });
+      });
+    }
 
     // Check which worlds are unlocked
-    const userProgress = queryOne<any>(
+    const userProgress = await queryOne<any>(
       'SELECT total_stars FROM player_progress WHERE user_id = ?',
       [req.userId]
     );
@@ -99,12 +100,12 @@ router.get('/', optionalAuth, (req: AuthRequest, res: Response) => {
 });
 
 // GET /api/worlds/:worldId/levels
-router.get('/:worldId/levels', optionalAuth, (req: AuthRequest, res: Response) => {
+router.get('/:worldId/levels', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { worldId } = req.params;
 
     // Verify world exists
-    const world = queryOne<World>(
+    const world = await queryOne<World>(
       'SELECT * FROM worlds WHERE id = ?',
       [worldId]
     );
@@ -118,7 +119,7 @@ router.get('/:worldId/levels', optionalAuth, (req: AuthRequest, res: Response) =
     }
 
     // Get levels
-    const levels = queryAll<Level>(
+    const levels = await queryAll<Level>(
       'SELECT * FROM levels WHERE world_id = ? ORDER BY level_number ASC',
       [worldId]
     );
@@ -156,13 +157,14 @@ router.get('/:worldId/levels', optionalAuth, (req: AuthRequest, res: Response) =
     }
 
     // Get user's completion data
-    const levelStats = levels.map(level => {
-      const completion = queryOne<any>(
+    const levelStats = [];
+    for (const level of levels) {
+      const completion = await queryOne<any>(
         'SELECT best_stars, best_score, times_played FROM level_completion WHERE user_id = ? AND level_id = ?',
         [req.userId, level.id]
       );
 
-      return {
+      levelStats.push({
         id: level.id,
         levelNumber: level.level_number,
         name: level.name,
@@ -174,8 +176,8 @@ router.get('/:worldId/levels', optionalAuth, (req: AuthRequest, res: Response) =
         bestStars: completion?.best_stars || 0,
         bestScore: completion?.best_score || 0,
         timesPlayed: completion?.times_played || 0,
-      };
-    });
+      });
+    }
 
     res.json({ world: worldData, levels: levelStats });
   } catch (error) {
