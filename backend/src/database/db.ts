@@ -26,6 +26,10 @@ export async function initializeDatabase(): Promise<void> {
       await pool.query(statement);
     }
   }
+
+  // Migrations: fix columns that were created as INTEGER but need BIGINT
+  await pool.query(`ALTER TABLE game_sessions ALTER COLUMN started_at TYPE BIGINT`);
+  await pool.query(`ALTER TABLE game_sessions ALTER COLUMN ended_at TYPE BIGINT`);
 }
 
 function getPool(): Pool {
