@@ -75,8 +75,8 @@ export const WorldMapPage: React.FC = () => {
         <h2 className="text-3xl font-black text-white mb-6 px-4">Choose Your World</h2>
 
         {worlds.map((world, index) => {
-          const isUnlocked = world.starsEarned >= world.unlockStarsRequired;
-          const starsNeeded = world.unlockStarsRequired - world.starsEarned;
+          const isUnlocked = world.unlocked !== undefined ? world.unlocked : world.starsEarned >= world.unlockStarsRequired;
+          const starsNeeded = Math.max(0, world.unlockStarsRequired - world.starsEarned);
 
           return (
             <div
