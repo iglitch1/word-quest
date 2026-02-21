@@ -87,8 +87,8 @@ export const LevelSelectPage: React.FC = () => {
 
           {/* Level Nodes */}
           {levels.map((level, index) => {
-            const isLocked = index > 0 && levels[index - 1].bestStars === 0;
-            const isNext = index > 0 && levels[index - 1].bestStars > 0 && level.bestStars === 0;
+            const isLocked = index > 0 && !levels[index - 1].completed;
+            const isNext = index > 0 && levels[index - 1].completed && !level.completed;
 
             return (
               <div key={level.id} className="relative mb-6">
