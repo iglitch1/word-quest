@@ -155,7 +155,7 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
             <span className="text-sm opacity-25 chase-dust" style={{ animationDelay: '0.15s' }}>💨</span>
           </div>
           <div className="relative queen-bounce">
-            <span className="text-6xl drop-shadow-lg" role="img" aria-label="Queen">👑</span>
+            <img src="/queen.png" alt="Queen" className="h-16 w-auto drop-shadow-lg" />
             {lastAnswerCorrect === false && (
               <>
                 <span className="absolute -top-3 -right-4 text-xl chase-heart-burst">❤️</span>
@@ -185,7 +185,7 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
             <span className="text-sm opacity-15 chase-dust" style={{ animationDelay: '0.1s' }}>💨</span>
           </div>
           <div className="relative alice-bounce">
-            <span className="text-6xl drop-shadow-lg" role="img" aria-label="Alice">👧</span>
+            <img src="/alice.png" alt="Alice" className="h-16 w-auto drop-shadow-lg" />
             {lastAnswerCorrect === true && (
               <>
                 <span className="absolute -top-7 -right-3 text-2xl chase-star-pop">⭐</span>
@@ -257,7 +257,7 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
       {/* Status bar */}
       <div className="flex justify-between items-center mt-2 px-1">
         <div className="flex items-center gap-2">
-          <span className="text-base">👑</span>
+          <img src="/queen.png" alt="Queen" className="h-5 w-auto" />
           <span className={`text-xs font-black tracking-wide ${
             queenCaught
               ? 'text-red-400 animate-pulse'

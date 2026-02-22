@@ -86,7 +86,7 @@ export const CharacterPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-400 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-7xl mb-4 animate-bounce">👧</div>
+          <img src="/alice.png" alt="Alice" className="w-24 h-auto mx-auto mb-4 animate-bounce" />
           <div className="text-white text-xl font-bold">Getting ready...</div>
         </div>
       </div>

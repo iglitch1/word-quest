@@ -53,7 +53,7 @@ export const WorldMapPage: React.FC = () => {
       <div className="bg-white shadow-lg sticky top-0 z-40">
         <div className="p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="text-4xl">👧</div>
+            <img src="/alice.png" alt="Alice" className="w-10 h-auto" />
             <div>
               <p className="font-bold text-lg text-gray-800">{user?.displayName || 'Maya'}</p>
               <p className="text-xs text-gray-600">Adventurer</p>

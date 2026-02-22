@@ -195,7 +195,7 @@ export const ShopPage: React.FC = () => {
           onClick={() => navigate('/character')}
           className="w-full mt-6 py-4 bg-white/20 backdrop-blur rounded-2xl text-white font-bold text-center active:scale-95 transition-all"
         >
-          👧 View My Character →
+          View My Character →
         </button>
       </div>
 

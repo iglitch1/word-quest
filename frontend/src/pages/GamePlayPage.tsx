@@ -229,7 +229,7 @@ export const GamePlayPage: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-teal-700 to-amber-600 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-2 animate-bounce">👧</div>
+          <img src="/alice.png" alt="Alice" className="w-16 h-auto mx-auto mb-2 animate-bounce" />
           {levelNumber % 2 === 1 ? (
             <img src="/bunny.png" alt="Bunny" className="w-16 h-20 object-contain mx-auto mb-4 animate-bounce" style={{ animationDelay: '0.2s' }} />
           ) : (
