@@ -10,6 +10,7 @@ import worldsRoutes from './routes/worlds';
 import gameRoutes from './routes/game';
 import shopRoutes from './routes/shop';
 import statsRoutes from './routes/stats';
+import adminRoutes from './routes/admin';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -24,6 +25,7 @@ app.use('/api/worlds', worldsRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {
