@@ -86,7 +86,7 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
   return (
     <div className={`chase-container ${shakeScreen ? 'chase-shake' : ''}`}>
       {/* ===== LARGE CHASE SCENE ===== */}
-      <div className="relative w-full h-48 rounded-3xl overflow-hidden border-2 border-yellow-400/70 shadow-2xl">
+      <div className="relative w-full h-28 sm:h-48 rounded-3xl overflow-hidden border-2 border-yellow-400/70 shadow-2xl">
         {/* Sky gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-900 via-purple-800 to-teal-700" />
 
@@ -141,9 +141,9 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
           <div className="absolute inset-0 bg-red-600/20 chase-danger-pulse" />
         )}
 
-        {/* === QUEEN OF HEARTS — BIG === */}
+        {/* === QUEEN OF HEARTS === */}
         <div
-          className={`absolute bottom-7 transition-all duration-1000 ease-out ${queenAnimClass}`}
+          className={`absolute bottom-4 sm:bottom-7 transition-all duration-1000 ease-out ${queenAnimClass}`}
           style={{ left: `${Math.min(90, Math.max(1, queenPercent))}%` }}
         >
           {(isClose || isDanger) && (
@@ -155,20 +155,20 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
             <span className="text-sm opacity-25 chase-dust" style={{ animationDelay: '0.15s' }}>💨</span>
           </div>
           <div className="relative queen-bounce">
-            <img src="/queen.png" alt="Queen" className="h-16 w-auto drop-shadow-lg" />
+            <img src="/queen.png" alt="Queen" className="h-10 sm:h-16 w-auto drop-shadow-lg" />
             {lastAnswerCorrect === false && (
               <>
-                <span className="absolute -top-3 -right-4 text-xl chase-heart-burst">❤️</span>
-                <span className="absolute -top-6 left-1 text-sm chase-heart-burst" style={{ animationDelay: '0.1s' }}>❤️</span>
-                <span className="absolute -top-2 -left-5 text-sm chase-heart-burst" style={{ animationDelay: '0.2s' }}>♥️</span>
+                <span className="absolute -top-3 -right-4 text-xl chase-heart-burst hidden sm:inline">❤️</span>
+                <span className="absolute -top-6 left-1 text-sm chase-heart-burst hidden sm:inline" style={{ animationDelay: '0.1s' }}>❤️</span>
+                <span className="absolute -top-2 -left-5 text-sm chase-heart-burst hidden sm:inline" style={{ animationDelay: '0.2s' }}>♥️</span>
               </>
             )}
           </div>
         </div>
 
-        {/* === ALICE — BIG === */}
+        {/* === ALICE === */}
         <div
-          className={`absolute bottom-7 transition-all duration-1000 ease-out ${aliceAnimClass}`}
+          className={`absolute bottom-4 sm:bottom-7 transition-all duration-1000 ease-out ${aliceAnimClass}`}
           style={{ left: `${Math.min(85, alicePercent)}%` }}
         >
           {sparkles.map((s) => (
@@ -185,7 +185,7 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
             <span className="text-sm opacity-15 chase-dust" style={{ animationDelay: '0.1s' }}>💨</span>
           </div>
           <div className="relative alice-bounce">
-            <img src="/alice.png" alt="Alice" className="h-16 w-auto drop-shadow-lg" />
+            <img src="/alice.png" alt="Alice" className="h-10 sm:h-16 w-auto drop-shadow-lg" />
             {lastAnswerCorrect === true && (
               <>
                 <span className="absolute -top-7 -right-3 text-2xl chase-star-pop">⭐</span>
@@ -201,7 +201,7 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
 
         {/* === PET TO RESCUE — Bunny (photo) or Budgie (emoji) === */}
         <div
-          className="absolute bottom-8 transition-all duration-1000 ease-out"
+          className="absolute bottom-5 sm:bottom-8 transition-all duration-1000 ease-out"
           style={{ left: `${petPercent}%` }}
         >
           <div className="relative bunny-hop">
@@ -209,18 +209,18 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
               <img
                 src="/bunny.png"
                 alt="Bunny"
-                className="w-12 h-16 object-contain drop-shadow-lg"
+                className="w-8 h-10 sm:w-12 sm:h-16 object-contain drop-shadow-lg"
               />
             ) : (
               <img
                 src="/budgie.png"
                 alt="Budgie"
-                className="w-14 h-11 object-contain drop-shadow-lg"
+                className="w-9 h-7 sm:w-14 sm:h-11 object-contain drop-shadow-lg"
               />
             )}
             {/* Pet calls for help when Queen is close */}
             {isDanger && (
-              <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-black animate-bounce whitespace-nowrap bg-white/90 text-red-600 rounded-full px-2 py-0.5 shadow-md">
+              <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-black animate-bounce whitespace-nowrap bg-white/90 text-red-600 rounded-full px-2 py-0.5 shadow-md hidden sm:inline">
                 Help me!
               </span>
             )}
@@ -231,10 +231,10 @@ export const AliceChase: React.FC<AliceChaseProps> = ({
           </div>
         </div>
 
-        {/* Escape door — BIG */}
-        <div className="absolute bottom-6 right-3">
+        {/* Escape door */}
+        <div className="absolute bottom-3 sm:bottom-6 right-3">
           <div className="relative">
-            <span className="text-5xl chase-door-glow">🚪</span>
+            <span className="text-3xl sm:text-5xl chase-door-glow">🚪</span>
             {alicePercent > 75 && !queenCaught && (
               <span className="absolute -top-3 -right-2 text-sm chase-twinkle">✨</span>
             )}

@@ -252,13 +252,13 @@ export const GamePlayPage: React.FC = () => {
   const hideWord = ['fill_blank', 'reverse_definition', 'spelling'].includes(question.questionType);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-teal-700 to-amber-600 p-4 safe-area-top relative">
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-teal-700 to-amber-600 p-2 sm:p-4 safe-area-top relative">
       {/* Background Music */}
       <WonderlandMusic isPlaying={musicOn} isPaused={isPaused} />
 
       {/* Top Bar */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-2">
+      <div className="mb-1 sm:mb-3">
+        <div className="flex items-center justify-between mb-1 sm:mb-2">
           {/* Back button */}
           <button
             onClick={handleExitGame}
@@ -306,7 +306,7 @@ export const GamePlayPage: React.FC = () => {
         </div>
 
         {/* Level Timer Bar */}
-        <div className="w-full h-1.5 bg-white bg-opacity-20 rounded-full overflow-hidden mb-2">
+        <div className="w-full h-1.5 bg-white bg-opacity-20 rounded-full overflow-hidden mb-1 sm:mb-2">
           <div
             className={`h-full transition-all duration-300 ${
               timerPercentage > 30
@@ -319,7 +319,7 @@ export const GamePlayPage: React.FC = () => {
 
         {/* Per-question Timer Bar */}
         {!isAnswering && (
-          <div className="w-full h-2.5 bg-white bg-opacity-20 rounded-full overflow-hidden mb-3">
+          <div className="w-full h-2.5 bg-white bg-opacity-20 rounded-full overflow-hidden mb-1 sm:mb-3">
             <div
               className={`h-full transition-all duration-1000 linear ${
                 questionTimerPercent > 40
@@ -353,96 +353,145 @@ export const GamePlayPage: React.FC = () => {
         />
       </div>
 
-      {/* Main Game Area */}
-      <div className="flex flex-col items-center justify-center py-4">
-        {/* Word Badge — hidden when the word is the answer */}
-        {!hideWord && (
-          <div className="bg-white rounded-full px-8 py-5 shadow-xl mb-8 text-center">
-            <p className="text-sm font-bold text-gray-600 mb-1">Word</p>
-            <p className="text-3xl font-black text-purple-600">{question.word}</p>
+      {/* Main Game Area — 3-column on desktop */}
+      <div className="flex items-start justify-center py-1 sm:py-4 gap-4">
+        {/* Queen of Hearts — left side (desktop only) */}
+        <div className="hidden lg:flex flex-col items-center justify-center flex-shrink-0 w-40 mt-8">
+          <div className={`transition-all duration-500 ${
+            lastAnswerCorrect === false ? 'scale-110' : lastAnswerCorrect === true ? 'scale-90 opacity-70' : ''
+          }`}>
+            <img
+              src="/queen.png"
+              alt="Queen of Hearts"
+              className="w-32 h-auto drop-shadow-2xl"
+            />
           </div>
-        )}
-
-        {/* Question Prompt */}
-        <p className="text-white text-lg font-bold text-center mb-8 px-4 leading-relaxed">
-          {question.prompt}
-        </p>
-
-        {/* Options */}
-        <div className={`w-full max-w-sm mb-6 ${
-          isTrueFalse ? 'flex gap-4' : 'space-y-3'
-        }`}>
-          {question.options.map((option, index) => (
-            <button
-              key={index}
-              onClick={() => !feedback && handleAnswer(index)}
-              disabled={isAnswering || isPaused}
-              className={`${isTrueFalse ? 'flex-1' : 'w-full'} py-4 rounded-2xl font-bold text-lg transition-all active:scale-95 shadow-lg transform ${
-                feedback
-                  ? option === feedback.correctAnswer
-                    ? 'bg-green-400 text-white scale-105'
-                    : index === selectedAnswer
-                    ? 'bg-red-400 text-white'
-                    : 'bg-white bg-opacity-40 text-white opacity-50'
-                  : selectedAnswer === index
-                  ? 'bg-yellow-300 text-white scale-105'
-                  : isTrueFalse
-                  ? index === 0
-                    ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                    : 'bg-red-100 text-red-700 border-2 border-red-300'
-                  : 'bg-white text-purple-600'
-              } ${isTrueFalse ? 'text-xl' : ''}`}
-            >
-              {isTrueFalse && (
-                <span className="mr-2">{index === 0 ? '✅' : '❌'}</span>
-              )}
-              {option}
-            </button>
-          ))}
+          {lastAnswerCorrect === false && (
+            <p className="text-red-300 text-xs font-black mt-2 animate-pulse text-center">Off with her head!</p>
+          )}
+          {lastAnswerCorrect === true && (
+            <p className="text-purple-300 text-xs font-black mt-2 text-center">Curses!</p>
+          )}
         </div>
 
-        {/* Feedback Messages */}
-        {feedback && (
-          <div className="text-center mb-4 animate-slideUp">
-            {isCorrect ? (
-              <>
-                <div className="text-4xl mb-2">✨</div>
-                <p className="text-white text-2xl font-black mb-1">Correct!</p>
-                <p className="text-yellow-200 font-bold">+{feedback.pointsEarned} points</p>
-                <p className="text-green-200 text-sm mt-1">Alice leaps ahead!</p>
-                {streak > 2 && (
-                  <p className="text-orange-300 font-black mt-2">
-                    🔥 {streak} in a row! 🔥
-                  </p>
+        {/* Center — Questions */}
+        <div className="flex flex-col items-center justify-center flex-1 max-w-lg">
+          {/* Word Badge — hidden when the word is the answer */}
+          {!hideWord && (
+            <div className="bg-white rounded-full px-5 py-2.5 sm:px-8 sm:py-5 shadow-xl mb-3 sm:mb-8 text-center">
+              <p className="text-xs sm:text-sm font-bold text-gray-600 mb-0.5">Word</p>
+              <p className="text-2xl sm:text-3xl font-black text-purple-600">{question.word}</p>
+            </div>
+          )}
+
+          {/* Question Prompt */}
+          <p className="text-white text-base sm:text-lg font-bold text-center mb-3 sm:mb-8 px-2 sm:px-4 leading-snug sm:leading-relaxed">
+            {question.prompt}
+          </p>
+
+          {/* Options */}
+          <div className={`w-full max-w-sm mb-3 sm:mb-6 ${
+            isTrueFalse ? 'flex gap-3 sm:gap-4' : 'space-y-2 sm:space-y-3'
+          }`}>
+            {question.options.map((option, index) => (
+              <button
+                key={index}
+                onClick={() => !feedback && handleAnswer(index)}
+                disabled={isAnswering || isPaused}
+                className={`${isTrueFalse ? 'flex-1' : 'w-full'} py-2.5 sm:py-4 rounded-2xl font-bold text-base sm:text-lg transition-all active:scale-95 shadow-lg transform ${
+                  feedback
+                    ? option === feedback.correctAnswer
+                      ? 'bg-green-400 text-white scale-105'
+                      : index === selectedAnswer
+                      ? 'bg-red-400 text-white'
+                      : 'bg-white bg-opacity-40 text-white opacity-50'
+                    : selectedAnswer === index
+                    ? 'bg-yellow-300 text-white scale-105'
+                    : isTrueFalse
+                    ? index === 0
+                      ? 'bg-green-100 text-green-700 border-2 border-green-300'
+                      : 'bg-red-100 text-red-700 border-2 border-red-300'
+                    : 'bg-white text-purple-600'
+                } ${isTrueFalse ? 'text-xl' : ''}`}
+              >
+                {isTrueFalse && (
+                  <span className="mr-2">{index === 0 ? '✅' : '❌'}</span>
                 )}
-              </>
+                {option}
+              </button>
+            ))}
+          </div>
+
+          {/* Feedback Messages */}
+          {feedback && (
+            <div className="text-center mb-2 sm:mb-4 animate-slideUp">
+              {isCorrect ? (
+                <>
+                  <div className="text-3xl sm:text-4xl mb-1">✨</div>
+                  <p className="text-white text-xl sm:text-2xl font-black mb-0.5">Correct!</p>
+                  <p className="text-yellow-200 font-bold text-sm sm:text-base">+{feedback.pointsEarned} points</p>
+                  <p className="text-green-200 text-xs sm:text-sm mt-0.5">Alice leaps ahead!</p>
+                  {streak > 2 && (
+                    <p className="text-orange-300 font-black mt-2">
+                      🔥 {streak} in a row! 🔥
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="text-3xl sm:text-4xl mb-1">😰</div>
+                  <p className="text-white text-xl sm:text-2xl font-black mb-0.5">
+                    {selectedAnswer === null ? "Time's up!" : 'Not quite!'}
+                  </p>
+                  <p className="text-red-200 text-xs sm:text-sm mb-0.5">The Queen gets closer!</p>
+                  <p className="text-gray-100 text-xs sm:text-sm mb-1">{feedback.explanation}</p>
+                  <p className="text-yellow-200 font-bold text-sm sm:text-base">
+                    Correct answer: <span className="text-white">{feedback.correctAnswer}</span>
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Alice + Pet — right side (desktop only) */}
+        <div className="hidden lg:flex flex-col items-center justify-center flex-shrink-0 w-40 mt-8">
+          <div className={`transition-all duration-500 ${
+            lastAnswerCorrect === true ? 'scale-110' : lastAnswerCorrect === false ? 'scale-90 opacity-70' : ''
+          }`}>
+            <img
+              src="/alice.png"
+              alt="Alice"
+              className="w-32 h-auto drop-shadow-2xl"
+            />
+          </div>
+          {/* Pet below Alice */}
+          <div className="mt-3">
+            {levelNumber % 2 === 1 ? (
+              <img src="/bunny.png" alt="Bunny" className="w-10 h-auto mx-auto drop-shadow-lg" />
             ) : (
-              <>
-                <div className="text-4xl mb-2">😰</div>
-                <p className="text-white text-2xl font-black mb-1">
-                  {selectedAnswer === null ? "Time's up!" : 'Not quite!'}
-                </p>
-                <p className="text-red-200 text-sm mb-1">The Queen gets closer!</p>
-                <p className="text-gray-100 text-sm mb-2">{feedback.explanation}</p>
-                <p className="text-yellow-200 font-bold">
-                  Correct answer: <span className="text-white">{feedback.correctAnswer}</span>
-                </p>
-              </>
+              <img src="/budgie.png" alt="Budgie" className="w-12 h-auto mx-auto drop-shadow-lg" />
             )}
           </div>
-        )}
+          {lastAnswerCorrect === true && (
+            <p className="text-green-300 text-xs font-black mt-2 animate-pulse text-center">Let's go!</p>
+          )}
+          {lastAnswerCorrect === false && (
+            <p className="text-yellow-200 text-xs font-black mt-2 text-center">Help me!</p>
+          )}
+        </div>
       </div>
 
       {/* Streak and Coins Counter */}
       {(streak > 0 || totalCoinsEarned > 0) && (
-        <div className="flex justify-center gap-6 mt-4">
+        <div className="flex justify-center gap-4 sm:gap-6 mt-1 sm:mt-4">
           {streak > 0 && (
-            <div className="bg-orange-400 text-white font-bold px-4 py-2 rounded-full text-sm">
+            <div className="bg-orange-400 text-white font-bold px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
               🔥 Streak: {streak}
             </div>
           )}
           {totalCoinsEarned > 0 && (
-            <div className="bg-yellow-300 text-white font-bold px-4 py-2 rounded-full text-sm">
+            <div className="bg-yellow-300 text-white font-bold px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">
               🪙 +{totalCoinsEarned}
             </div>
           )}
