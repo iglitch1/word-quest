@@ -124,6 +124,16 @@ export interface CharacterEquipment {
   effect: string | null;
 }
 
+// Question Review Types (for end-of-level answer review)
+export interface QuestionReview {
+  word: string;
+  prompt: string;
+  selectedAnswer: string | null;
+  correctAnswer: string;
+  wasCorrect: boolean;
+  explanation: string;
+}
+
 // Stats Types
 export interface PlayerStats {
   totalCoins: number;

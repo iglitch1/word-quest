@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useApi } from '../hooks/useApi';
-import { GameSession, Question, AnswerResult, GameSummary } from '../types';
+import { GameSession, Question, AnswerResult, GameSummary, QuestionReview, Level } from '../types';
 import { AliceChase } from '../components/AliceChase';
 import { WonderlandMusic } from '../components/WonderlandMusic';
 
@@ -29,12 +29,16 @@ export const GamePlayPage: React.FC = () => {
   const [correctAnswerCount, setCorrectAnswerCount] = useState(0);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
   const [musicOn, setMusicOn] = useState(true);
+  const [questionResults, setQuestionResults] = useState<QuestionReview[]>([]);
+  const questionResultsRef = useRef<QuestionReview[]>([]);
   const levelTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const questionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const worldName = location.state?.worldName || 'Unknown World';
   const levelName = location.state?.levelName || 'Level';
   const levelNumber = location.state?.levelNumber || 1;
+  const worldId = location.state?.worldId || '';
+  const levels: Level[] = location.state?.levels || [];
 
   // Start game session
   useEffect(() => {
@@ -114,6 +118,18 @@ export const GamePlayPage: React.FC = () => {
       setStreak(0);
       setWrongAnswerCount((prev) => prev + 1);
 
+      // Track question result for review
+      const qr: QuestionReview = {
+        word: question.word,
+        prompt: question.prompt,
+        selectedAnswer: null,
+        correctAnswer: result.correctAnswer,
+        wasCorrect: false,
+        explanation: result.explanation,
+      };
+      questionResultsRef.current = [...questionResultsRef.current, qr];
+      setQuestionResults(questionResultsRef.current);
+
       setTimeout(() => {
         if (currentQuestionIndex + 1 < session.questions.length) {
           setCurrentQuestionIndex((prev) => prev + 1);
@@ -148,6 +164,11 @@ export const GamePlayPage: React.FC = () => {
           worldName,
           levelName,
           timeExpired,
+          questionResults: questionResultsRef.current,
+          worldId,
+          levelNumber,
+          levelId,
+          levels,
         },
       });
     } catch (error) {
@@ -185,6 +206,18 @@ export const GamePlayPage: React.FC = () => {
         setStreak(0);
         setWrongAnswerCount((prev) => prev + 1);
       }
+
+      // Track question result for review
+      const qr: QuestionReview = {
+        word: question.word,
+        prompt: question.prompt,
+        selectedAnswer: question.options[selectedIndex],
+        correctAnswer: result.correctAnswer,
+        wasCorrect: result.correct,
+        explanation: result.explanation,
+      };
+      questionResultsRef.current = [...questionResultsRef.current, qr];
+      setQuestionResults(questionResultsRef.current);
 
       // Auto-advance after 1.5 seconds
       setTimeout(() => {

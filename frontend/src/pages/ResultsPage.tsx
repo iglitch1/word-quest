@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { GameSummary } from '../types';
+import { GameSummary, QuestionReview, Level } from '../types';
 import { StarDisplay } from '../components/StarDisplay';
 import { CoinDisplay } from '../components/CoinDisplay';
 
@@ -9,8 +9,19 @@ export const ResultsPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { summary, worldName, levelName, timeExpired } = location.state || {};
-  const [showWords, setShowWords] = useState(false);
+  const {
+    summary,
+    worldName,
+    levelName,
+    timeExpired,
+    questionResults,
+    worldId,
+    levelNumber,
+    levelId,
+    levels,
+  } = location.state || {};
+
+  const [showReview, setShowReview] = useState(false);
 
   if (!summary) {
     return (
@@ -30,12 +41,48 @@ export const ResultsPage: React.FC = () => {
   }
 
   const summary_typed: GameSummary = summary;
+  const typedQuestionResults: QuestionReview[] = questionResults || [];
+  const typedLevels: Level[] = levels || [];
   const isSuccess = summary_typed.starsEarned > 0;
   const accuracy = Math.round((summary_typed.questionsCorrect / summary_typed.totalQuestions) * 100);
   const hasConfetti = summary_typed.starsEarned === 3;
 
+  // Compute next level
+  const currentLevelNum = levelNumber || 0;
+  const nextLevel = typedLevels.find((l: Level) => l.levelNumber === currentLevelNum + 1);
+  const hasNextLevel = !!nextLevel && isSuccess;
+
+  const handleNextLevel = () => {
+    if (!nextLevel || !worldId) return;
+    navigate(`/play/${nextLevel.id}`, {
+      state: {
+        worldName,
+        levelName: nextLevel.name,
+        levelNumber: nextLevel.levelNumber,
+        worldId,
+        levels: typedLevels,
+      },
+    });
+  };
+
+  const handlePlayAgain = () => {
+    if (levelId && worldId) {
+      navigate(`/play/${levelId}`, {
+        state: {
+          worldName,
+          levelName,
+          levelNumber,
+          worldId,
+          levels: typedLevels,
+        },
+      });
+    } else {
+      navigate(-1);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 to-blue-500 p-4 flex flex-col items-center justify-center safe-area-bottom">
+    <div className="min-h-screen bg-gradient-to-br from-purple-400 to-blue-500 p-4 flex flex-col items-center justify-start safe-area-bottom overflow-y-auto">
       {/* Confetti Effect */}
       {hasConfetti && (
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -61,7 +108,7 @@ export const ResultsPage: React.FC = () => {
       )}
 
       {/* Main Card */}
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 animate-slideUp">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 animate-slideUp mt-8 mb-4">
         {/* Header */}
         <div className="text-center mb-8">
           <p className="text-sm font-bold text-gray-600 mb-2">
@@ -125,33 +172,96 @@ export const ResultsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Words Learned */}
-        {summary_typed.wordsLearned > 0 && (
+        {/* Question Review */}
+        {typedQuestionResults.length > 0 && (
           <div className="mb-8">
             <button
-              onClick={() => setShowWords(!showWords)}
-              className="w-full bg-gray-100 rounded-lg p-3 flex items-center justify-between font-bold text-gray-700"
+              onClick={() => setShowReview(!showReview)}
+              className="w-full bg-gray-100 rounded-2xl p-4 flex items-center justify-between font-bold text-gray-700 active:scale-95 transition-all"
             >
-              <span>📚 Words Learned: {summary_typed.wordsLearned}</span>
-              <span>{showWords ? '▲' : '▼'}</span>
+              <span>📝 Review Answers ({summary_typed.questionsCorrect}/{summary_typed.totalQuestions} correct)</span>
+              <span className="text-lg">{showReview ? '▲' : '▼'}</span>
             </button>
+
+            {showReview && (
+              <div className="mt-3 space-y-3 animate-slideDown">
+                {typedQuestionResults.map((qr: QuestionReview, i: number) => (
+                  <div
+                    key={i}
+                    className={`rounded-2xl p-4 border-2 ${
+                      qr.wasCorrect
+                        ? 'bg-green-50 border-green-200'
+                        : 'bg-red-50 border-red-200'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm ${
+                        qr.wasCorrect ? 'bg-green-400' : 'bg-red-400'
+                      }`}>
+                        {qr.wasCorrect ? '✓' : '✗'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-gray-800 text-base">{qr.word}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 leading-snug">{qr.prompt}</p>
+
+                        {qr.wasCorrect ? (
+                          <p className="text-sm text-green-600 font-bold mt-2">
+                            ✅ {qr.correctAnswer}
+                          </p>
+                        ) : (
+                          <div className="mt-2 space-y-1">
+                            {qr.selectedAnswer ? (
+                              <p className="text-sm text-red-500 font-bold">
+                                ❌ Your answer: {qr.selectedAnswer}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-orange-500 font-bold">
+                                ⏰ Time ran out
+                              </p>
+                            )}
+                            <p className="text-sm text-green-600 font-bold">
+                              ✅ Correct: {qr.correctAnswer}
+                            </p>
+                            {qr.explanation && (
+                              <p className="text-xs text-gray-500 mt-1 italic">{qr.explanation}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-4">
-          <button
-            onClick={() => navigate('/worlds')}
-            className="btn-secondary flex-1 py-4 font-bold text-lg"
-          >
-            Back to Map
-          </button>
-          <button
-            onClick={() => navigate(-1)}
-            className="btn-primary flex-1 py-4 font-bold text-lg"
-          >
-            Play Again
-          </button>
+        <div className="space-y-3">
+          {/* Next Level — prominent, only when available */}
+          {hasNextLevel && (
+            <button
+              onClick={handleNextLevel}
+              className="w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white font-black text-lg rounded-2xl active:scale-95 transition-all shadow-lg"
+            >
+              Next Level →
+            </button>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => worldId ? navigate(`/worlds/${worldId}`) : navigate('/worlds')}
+              className="btn-secondary flex-1 py-4 font-bold text-base"
+            >
+              Back to Map
+            </button>
+            <button
+              onClick={handlePlayAgain}
+              className="btn-primary flex-1 py-4 font-bold text-base"
+            >
+              Play Again
+            </button>
+          </div>
         </div>
       </div>
     </div>

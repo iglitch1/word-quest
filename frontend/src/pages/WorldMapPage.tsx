@@ -5,7 +5,26 @@ import { useApi } from '../hooks/useApi';
 import { World } from '../types';
 import { BottomNav } from '../components/BottomNav';
 import { CoinDisplay } from '../components/CoinDisplay';
-import { StarDisplay } from '../components/StarDisplay';
+
+// Island positions for the winding path layout (percentage-based for responsiveness)
+const ISLAND_POSITIONS = [
+  { x: 25, y: 12 },
+  { x: 70, y: 22 },
+  { x: 20, y: 37 },
+  { x: 65, y: 50 },
+  { x: 30, y: 63 },
+  { x: 68, y: 76 },
+];
+
+// World-themed decorations
+const WORLD_DECORATIONS: Record<string, { bg: string; particles: string[] }> = {
+  meadow:    { bg: '🌸🌻🦋🌿', particles: ['🌸', '🦋', '🌻'] },
+  forest:    { bg: '🍄🌲🦊🍃', particles: ['🍃', '🍄', '🌲'] },
+  ocean:     { bg: '🐚🌊🐠🦀', particles: ['🐚', '🌊', '🐠'] },
+  mountain:  { bg: '⛰️🦅🏔️❄️', particles: ['❄️', '🦅', '⛰️'] },
+  castle:    { bg: '🏰👑🗡️🛡️', particles: ['👑', '🏰', '✨'] },
+  storm:     { bg: '⚡🌩️🌪️💨', particles: ['⚡', '🌩️', '💨'] },
+};
 
 export const WorldMapPage: React.FC = () => {
   const { user } = useAuth();
@@ -38,102 +57,248 @@ export const WorldMapPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-400 to-blue-500 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-indigo-900 via-purple-800 to-blue-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🗺️</div>
-          <div className="text-white text-xl font-bold">Loading worlds...</div>
+          <img src="/alice.png" alt="Alice" className="w-16 h-auto mx-auto mb-4 animate-bounce" />
+          <div className="text-white text-xl font-bold">Exploring Wonderland...</div>
         </div>
       </div>
     );
   }
 
+  // Find highest unlocked world index for Alice position
+  const currentWorldIndex = worlds.reduce((highest, w, i) => {
+    const isUnlocked = w.unlocked !== undefined ? w.unlocked : w.starsEarned >= w.unlockStarsRequired;
+    return isUnlocked ? i : highest;
+  }, 0);
+
+  // Build SVG path through all island positions
+  const buildPathD = () => {
+    if (worlds.length === 0) return '';
+    const points = worlds.map((_, i) => {
+      const pos = ISLAND_POSITIONS[i % ISLAND_POSITIONS.length];
+      return { x: (pos.x / 100) * 400, y: 60 + (pos.y / 100) * 700 };
+    });
+    let d = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cpx1 = prev.x + (curr.x - prev.x) * 0.5;
+      const cpy1 = prev.y;
+      const cpx2 = prev.x + (curr.x - prev.x) * 0.5;
+      const cpy2 = curr.y;
+      d += ` C ${cpx1} ${cpy1}, ${cpx2} ${cpy2}, ${curr.x} ${curr.y}`;
+    }
+    return d;
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 to-blue-500 pb-28 safe-area-bottom">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-900 via-purple-900 to-blue-950 pb-28 safe-area-bottom overflow-hidden relative">
+      {/* Animated sky background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Twinkling stars */}
+        {Array.from({ length: 25 }).map((_, i) => (
+          <div
+            key={`star-${i}`}
+            className="absolute rounded-full bg-white world-map-twinkle"
+            style={{
+              width: `${2 + Math.random() * 3}px`,
+              height: `${2 + Math.random() * 3}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 40}%`,
+              animationDelay: `${Math.random() * 4}s`,
+              opacity: 0.6,
+            }}
+          />
+        ))}
+        {/* Floating clouds */}
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={`cloud-${i}`}
+            className="absolute text-4xl world-map-cloud-drift opacity-20"
+            style={{
+              top: `${5 + Math.random() * 30}%`,
+              left: `${-10 + Math.random() * 20}%`,
+              animationDelay: `${i * 6}s`,
+              animationDuration: `${25 + Math.random() * 15}s`,
+            }}
+          >
+            ☁️
+          </div>
+        ))}
+      </div>
+
       {/* Top Bar */}
-      <div className="bg-white shadow-lg sticky top-0 z-40">
-        <div className="p-4 flex items-center justify-between">
+      <div className="bg-black/30 backdrop-blur-md sticky top-0 z-40 border-b border-white/10">
+        <div className="p-3 sm:p-4 flex items-center justify-between max-w-lg mx-auto">
           <div className="flex items-center gap-3">
-            <img src="/alice.png" alt="Alice" className="w-10 h-auto" />
+            <img src="/alice.png" alt="Alice" className="w-10 h-auto drop-shadow-lg" />
             <div>
-              <p className="font-bold text-lg text-gray-800">{user?.displayName || 'Maya'}</p>
-              <p className="text-xs text-gray-600">Adventurer</p>
+              <p className="font-bold text-base text-white">{user?.displayName || 'Maya'}</p>
+              <p className="text-xs text-purple-200">Wonderland Explorer</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             <CoinDisplay amount={totalCoins} />
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">⭐</span>
-              <span className="font-bold text-lg text-yellow-600">{totalStars}</span>
+            <div className="flex items-center gap-1.5 bg-yellow-400/20 px-3 py-1 rounded-full">
+              <span className="text-lg">⭐</span>
+              <span className="font-black text-base text-yellow-300">{totalStars}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Worlds List */}
-      <div className="p-4 space-y-4">
-        <h2 className="text-3xl font-black text-white mb-6 px-4">Choose Your World</h2>
+      {/* Title */}
+      <div className="text-center pt-4 pb-2 relative z-10">
+        <h2 className="text-2xl sm:text-3xl font-black text-white drop-shadow-lg">Wonderland Map</h2>
+        <p className="text-purple-200 text-xs mt-1">Choose your adventure!</p>
+      </div>
 
+      {/* Map Area */}
+      <div className="relative mx-auto max-w-md px-4" style={{ minHeight: `${Math.max(worlds.length * 150, 600)}px` }}>
+        {/* SVG winding path */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          viewBox={`0 0 400 ${60 + (ISLAND_POSITIONS.length / 100) * 700 + 200}`}
+          preserveAspectRatio="none"
+          style={{ height: '100%', width: '100%' }}
+        >
+          <defs>
+            <linearGradient id="pathGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#a855f7" stopOpacity="0.4" />
+            </linearGradient>
+          </defs>
+          {/* Dotted path line */}
+          <path
+            d={buildPathD()}
+            fill="none"
+            stroke="url(#pathGrad)"
+            strokeWidth="4"
+            strokeDasharray="12 8"
+            strokeLinecap="round"
+          />
+        </svg>
+
+        {/* World Islands */}
         {worlds.map((world, index) => {
+          const pos = ISLAND_POSITIONS[index % ISLAND_POSITIONS.length];
           const isUnlocked = world.unlocked !== undefined ? world.unlocked : world.starsEarned >= world.unlockStarsRequired;
-          const starsNeeded = Math.max(0, world.unlockStarsRequired - world.starsEarned);
+          const starsNeeded = Math.max(0, world.unlockStarsRequired - totalStars);
+          const isCurrent = index === currentWorldIndex;
+          const theme = WORLD_DECORATIONS[world.theme] || WORLD_DECORATIONS.meadow;
+          const isCompleted = world.levelsCompleted === world.totalLevels && world.totalLevels > 0;
 
           return (
             <div
               key={world.id}
-              className="animate-slideUp"
-              style={{ animationDelay: `${index * 100}ms` }}
+              className="absolute animate-slideUp"
+              style={{
+                left: `${pos.x}%`,
+                top: `${pos.y}%`,
+                transform: 'translate(-50%, -50%)',
+                animationDelay: `${index * 150}ms`,
+                zIndex: isCurrent ? 20 : 10,
+              }}
             >
+              {/* Alice indicator at current world */}
+              {isCurrent && (
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-30">
+                  <img src="/alice.png" alt="Alice" className="w-10 h-auto drop-shadow-xl alice-bounce" />
+                </div>
+              )}
+
               <button
                 onClick={() => isUnlocked && navigate(`/worlds/${world.id}`)}
                 disabled={!isUnlocked}
-                className={`w-full rounded-2xl p-6 shadow-lg transition-all active:scale-95 disabled:opacity-50 ${
-                  isUnlocked ? 'cursor-pointer' : 'cursor-not-allowed'
+                className={`relative group transition-all duration-300 ${
+                  isUnlocked ? 'cursor-pointer active:scale-90' : 'cursor-not-allowed'
                 }`}
-                style={{
-                  background: `linear-gradient(135deg, ${world.colorPrimary} 0%, ${world.colorSecondary} 100%)`,
-                }}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 text-left">
-                    <div className="text-6xl mb-3">{world.iconEmoji}</div>
-                    <h3 className="text-2xl font-black text-white mb-2">{world.name}</h3>
-                    <p className="text-white text-sm opacity-90 mb-4">{world.description}</p>
+                {/* Island glow for unlocked */}
+                {isUnlocked && (
+                  <div
+                    className={`absolute inset-0 rounded-full blur-xl ${isCurrent ? 'world-map-glow' : 'opacity-30'}`}
+                    style={{ background: world.colorPrimary, transform: 'scale(1.5)' }}
+                  />
+                )}
 
-                    <div className="flex gap-6 flex-wrap">
-                      <div>
-                        <p className="text-white text-xs font-bold opacity-75">Stars</p>
-                        <div className="flex gap-1 mt-1">
-                          {Array.from({ length: world.totalLevels }).map((_, i) => (
-                            <span key={i}>
-                              {i < world.starsEarned ? '⭐' : '☆'}
-                            </span>
-                          ))}
-                        </div>
-                        <p className="text-white text-xs font-bold mt-1">
-                          {world.starsEarned}/{world.totalLevels}
-                        </p>
-                      </div>
-
-                      <div>
-                        <p className="text-white text-xs font-bold opacity-75">Levels</p>
-                        <p className="text-white font-bold text-lg mt-1">
-                          {world.levelsCompleted}/{world.totalLevels}
-                        </p>
+                {/* Island body */}
+                <div
+                  className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-full flex flex-col items-center justify-center shadow-2xl border-4 transition-all ${
+                    isUnlocked
+                      ? isCurrent
+                        ? 'border-yellow-300 world-map-island-pulse'
+                        : 'border-white/40'
+                      : 'border-gray-600 grayscale opacity-60'
+                  }`}
+                  style={{
+                    background: isUnlocked
+                      ? `radial-gradient(circle at 30% 30%, ${world.colorPrimary}, ${world.colorSecondary})`
+                      : 'linear-gradient(135deg, #374151, #1f2937)',
+                  }}
+                >
+                  {/* Locked overlay */}
+                  {!isUnlocked && (
+                    <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center z-10">
+                      <div className="text-center">
+                        <div className="text-3xl mb-0.5">🔒</div>
+                        <p className="text-white text-xs font-bold">{starsNeeded}⭐</p>
                       </div>
                     </div>
+                  )}
+
+                  {/* World icon */}
+                  <div className={`text-4xl sm:text-5xl ${isUnlocked ? '' : 'opacity-40'}`}>
+                    {world.iconEmoji}
                   </div>
 
-                  {!isUnlocked && (
-                    <div className="ml-4 text-center">
-                      <div className="text-4xl">🔒</div>
-                      <p className="text-white text-xs font-bold mt-2">
-                        {starsNeeded} more stars
-                      </p>
+                  {/* Completion badge */}
+                  {isCompleted && (
+                    <div className="absolute -top-1 -right-1 w-7 h-7 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg border-2 border-white">
+                      <span className="text-sm">✓</span>
                     </div>
                   )}
                 </div>
+
+                {/* World name + star progress below island */}
+                <div className="mt-2 text-center" style={{ width: '140px', marginLeft: '-6px' }}>
+                  <p className={`font-black text-sm drop-shadow-lg ${isUnlocked ? 'text-white' : 'text-gray-400'}`}>
+                    {world.name}
+                  </p>
+                  {isUnlocked && (
+                    <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                      {Array.from({ length: Math.min(world.totalLevels * 3, 15) }).map((_, i) => (
+                        <span key={i} className="text-xs">
+                          {i < world.starsEarned ? '⭐' : '·'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {isUnlocked && (
+                    <p className="text-purple-200 text-xs mt-0.5">
+                      {world.levelsCompleted}/{world.totalLevels} levels
+                    </p>
+                  )}
+                </div>
               </button>
+
+              {/* Floating decoration particles */}
+              {isUnlocked && theme.particles.map((emoji, pi) => (
+                <div
+                  key={pi}
+                  className="absolute pointer-events-none world-map-particle"
+                  style={{
+                    top: `${-15 + Math.random() * 30}%`,
+                    left: `${70 + pi * 25}%`,
+                    animationDelay: `${pi * 1.2}s`,
+                    fontSize: '14px',
+                  }}
+                >
+                  {emoji}
+                </div>
+              ))}
             </div>
           );
         })}
