@@ -9,7 +9,8 @@
     "build": "cd frontend && npm run build",
     "start": "cd backend && npm start",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "seed": "cd backend && npm run seed"
+    "seed": "cd backend && npm run seed",
+    "replit": "cd backend && npm install && npx tsc && cd ../frontend && npm install && npm run build && cd ../backend && node dist/index.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"

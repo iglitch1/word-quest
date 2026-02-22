@@ -1,0 +1,17 @@
+run = "npm run replit"
+entrypoint = "backend/src/index.ts"
+
+[nix]
+channel = "stable-24_05"
+
+[env]
+NODE_ENV = "production"
+DATABASE_URL = "${DATABASE_URL}"
+
+[deployment]
+run = ["sh", "-c", "cd backend && node dist/index.js"]
+build = ["sh", "-c", "cd backend && npm install && npx tsc && cd ../frontend && npm install && npm run build"]
+
+[[ports]]
+localPort = 3001
+externalPort = 80
